@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ålderskontroll Webbapp</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 10px;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        #reader {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        #result {
+            margin-top: 15px;
+            font-size: 1.1em;
+            line-height: 1.5;
+        }
+        .approved { color: green; }
+        .denied { color: red; }
+        .error { color: orange; }
+        @media (max-width: 600px) {
+            h1 { font-size: 1.2em; }
+            #reader { max-width: 100%; }
+            #result { font-size: 1em; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Skanna QR-kod eller streckkod med mobilkameran</h1>
+    <div id="reader"></div>
+    <div id="result"></div>
+
+    <!-- Ladda in html5-qrcode biblioteket -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script>
+        const html5QrCode = new Html5Qrcode("reader");
+
+        // Starta skannern
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText, decodedResult) => {
+                checkAge(decodedText);
+            },
+            (errorMessage) => {
+                console.log("Skanningsfel: ", errorMessage);
+            }
+        ).catch((err) => {
+            console.error("Kunde inte starta skannern: ", err);
+            document.getElementById("result").innerHTML = "Kunde inte komma åt kameran. Kontrollera behörigheter.";
+        });
+
+        // Ålderskontroll för YYMMDD****
+        function checkAge(scannedData) {
+            // Extrahera YYMMDD
+            const birthStr = scannedData.substring(0, 6); // T.ex. "050326"
+            const year = parseInt(birthStr.substring(0, 2)); // "05"
+            const month = parseInt(birthStr.substring(2, 4)) - 1; // "03"
+            const day = parseInt(birthStr.substring(4, 6)); // "26"
+
+            const today = new Date();
+            const currentYear = today.getFullYear() % 100; // T.ex. 25
+
+            // Försök med 2000-talet först
+            let fullYear = 2000 + year;
+            let birthDate = new Date(fullYear, month, day);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+
+            // Om över 50, prova 1900-talet
+            if (age > 50) {
+                fullYear = 1900 + year;
+                birthDate = new Date(fullYear, month, day);
+                age = today.getFullYear() - birthDate.getFullYear();
+                const newMonthDiff = today.getMonth() - birthDate.getMonth();
+                if (newMonthDiff < 0 || (newMonthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+            }
+
+            // Kontrollera åldersgräns
+            const resultDiv = document.getElementById("result");
+            if (age > 50 || age < 0 || isNaN(age)) {
+                resultDiv.innerHTML = `<span class="error">Ogiltigt födelsedatum (ålder över 50 eller felaktigt datum)</span>`;
+            } else {
+                let resultHTML = `Ålder: ${age}<br>`;
+                if (age >= 18) {
+                    resultHTML += `<span class="approved">18+: Godkänd</span><br>`;
+                } else {
+                    resultHTML += `<span class="denied">18+: Ej godkänd</span><br>`;
+                }
+                if (age >= 15) {
+                    resultHTML += `<span class="approved">15+: Godkänd</span>`;
+                } else {
+                    resultHTML += `<span class="denied">15+: Ej godkänd</span>`;
+                }
+                resultDiv.innerHTML = resultHTML;
+            }
+
+            // Stoppa skannern
+            html5QrCode.stop().then(() => console.log("Skannern stoppad"));
+        }
+    </script>
+</body>
+</html>
