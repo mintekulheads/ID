@@ -9,7 +9,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #e74c3c, #c0392b); /* Röd gradient */
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -17,13 +17,14 @@
             justify-content: center;
         }
         h1 {
-            color: #fff; /* Vit text för kontrast */
+            color: #fff;
             font-size: 2em;
             margin-bottom: 20px;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3); /* Starkare skugga */
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
         }
         #reader-container {
-            background: #fff; /* Vit bakgrund för skannern */
+            position: relative;
+            background: #fff;
             padding: 15px;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -35,10 +36,31 @@
             width: 100%;
             border-radius: 10px;
         }
+        #focus-overlay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: calc(100% - 30px);
+            height: calc(100% - 30px);
+            border: 2px dashed #e74c3c;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e74c3c;
+            font-size: 1.2em;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.8);
+            transition: opacity 0.5s ease;
+        }
+        #focus-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
         #result {
             margin-top: 20px;
             padding: 15px;
-            background: #fff; /* Vit bakgrund för resultat */
+            background: #fff;
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             width: 90%;
@@ -47,24 +69,15 @@
             line-height: 1.6;
             transition: all 0.3s ease;
         }
-        .approved { 
-            color: #2ecc71; /* Grön för godkänd */
-            font-weight: bold; 
-        }
-        .denied { 
-            color: #e74c3c; /* Matchar rött tema för ej godkänd */
-            font-weight: bold; 
-        }
-        .error { 
-            color: #f1c40f; /* Gul för fel */
-            font-weight: bold; 
-        }
+        .approved { color: #2ecc71; font-weight: bold; }
+        .denied { color: #e74c3c; font-weight: bold; }
+        .error { color: #f1c40f; font-weight: bold; }
         #restart-button {
             margin-top: 15px;
             padding: 10px 20px;
             font-size: 1em;
             color: #fff;
-            background-color: #e74c3c; /* Röd knapp */
+            background-color: #e74c3c;
             border: none;
             border-radius: 5px;
             cursor: pointer;
@@ -72,7 +85,7 @@
             transition: background-color 0.3s ease;
         }
         #restart-button:hover {
-            background-color: #c0392b; /* Mörkare röd vid hover */
+            background-color: #c0392b;
         }
         @media (max-width: 600px) {
             h1 { font-size: 1.5em; }
@@ -92,6 +105,7 @@
     <h1>Skanna QR-kod för ålderskontroll</h1>
     <div id="reader-container">
         <div id="reader"></div>
+        <div id="focus-overlay">Fokuserar...</div>
     </div>
     <div id="result"></div>
     <button id="restart-button" style="display: none;">Skanna igen</button>
@@ -102,6 +116,7 @@
         const html5QrCode = new Html5Qrcode("reader");
         const resultDiv = document.getElementById("result");
         const restartButton = document.getElementById("restart-button");
+        const focusOverlay = document.getElementById("focus-overlay");
 
         function startScanner() {
             html5QrCode.start(
@@ -117,7 +132,13 @@
                 console.error("Kunde inte starta skannern: ", err);
                 resultDiv.innerHTML = `<span class="error">Kunde inte komma åt kameran. Kontrollera behörigheter.</span>`;
                 restartButton.style.display = "block";
+                focusOverlay.classList.add("hidden");
             });
+
+            // Ge kameran tid att fokusera (2 sekunder) innan skanning börjar fullt ut
+            setTimeout(() => {
+                focusOverlay.classList.add("hidden");
+            }, 2000);
         }
 
         startScanner();
@@ -175,6 +196,7 @@
         restartButton.addEventListener("click", () => {
             resultDiv.innerHTML = "";
             restartButton.style.display = "none";
+            focusOverlay.classList.remove("hidden");
             startScanner();
         });
     </script>
