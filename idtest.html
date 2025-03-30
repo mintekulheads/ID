@@ -3,76 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ålderskontroll Webbapp</title>
+    <title>Ålderskontroll</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 10px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            background-color: #f0f0f0;
+            padding: 0;
+            background: linear-gradient(135deg, #e74c3c, #c0392b); /* Röd gradient */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
         h1 {
-            font-size: 1.5em;
-            margin-bottom: 10px;
+            color: #fff; /* Vit text för kontrast */
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3); /* Starkare skugga */
+        }
+        #reader-container {
+            background: #fff; /* Vit bakgrund för skannern */
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 450px;
+            overflow: hidden;
         }
         #reader {
             width: 100%;
-            max-width: 400px;
-            margin: 0 auto;
+            border-radius: 10px;
         }
         #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff; /* Vit bakgrund för resultat */
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+            font-size: 1.2em;
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+        .approved { 
+            color: #2ecc71; /* Grön för godkänd */
+            font-weight: bold; 
+        }
+        .denied { 
+            color: #e74c3c; /* Matchar rött tema för ej godkänd */
+            font-weight: bold; 
+        }
+        .error { 
+            color: #f1c40f; /* Gul för fel */
+            font-weight: bold; 
+        }
+        #restart-button {
             margin-top: 15px;
-            font-size: 1.1em;
-            line-height: 1.5;
+            padding: 10px 20px;
+            font-size: 1em;
+            color: #fff;
+            background-color: #e74c3c; /* Röd knapp */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease;
         }
-        .approved { color: green; }
-        .denied { color: red; }
-        .error { color: orange; }
+        #restart-button:hover {
+            background-color: #c0392b; /* Mörkare röd vid hover */
+        }
         @media (max-width: 600px) {
-            h1 { font-size: 1.2em; }
-            #reader { max-width: 100%; }
+            h1 { font-size: 1.5em; }
+            #reader-container, #result { width: 95%; }
             #result { font-size: 1em; }
+            #restart-button { font-size: 0.9em; padding: 8px 16px; }
         }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #result:empty { display: none; }
+        #result:not(:empty) { animation: fadeIn 0.5s ease; }
     </style>
 </head>
 <body>
-    <h1>Skanna QR-kod eller streckkod med mobilkameran</h1>
-    <div id="reader"></div>
+    <h1>Skanna QR-kod för ålderskontroll</h1>
+    <div id="reader-container">
+        <div id="reader"></div>
+    </div>
     <div id="result"></div>
+    <button id="restart-button" style="display: none;">Skanna igen</button>
 
     <!-- Ladda in html5-qrcode biblioteket -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script>
         const html5QrCode = new Html5Qrcode("reader");
+        const resultDiv = document.getElementById("result");
+        const restartButton = document.getElementById("restart-button");
 
-        // Starta skannern
-        html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            (decodedText, decodedResult) => {
-                checkAge(decodedText);
-            },
-            (errorMessage) => {
-                console.log("Skanningsfel: ", errorMessage);
-            }
-        ).catch((err) => {
-            console.error("Kunde inte starta skannern: ", err);
-            document.getElementById("result").innerHTML = "Kunde inte komma åt kameran. Kontrollera behörigheter.";
-        });
+        function startScanner() {
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText, decodedResult) => {
+                    checkAge(decodedText);
+                },
+                (errorMessage) => {
+                    console.log("Skanningsfel: ", errorMessage);
+                }
+            ).catch((err) => {
+                console.error("Kunde inte starta skannern: ", err);
+                resultDiv.innerHTML = `<span class="error">Kunde inte komma åt kameran. Kontrollera behörigheter.</span>`;
+                restartButton.style.display = "block";
+            });
+        }
 
-        // Ålderskontroll för YYMMDD****
+        startScanner();
+
         function checkAge(scannedData) {
-            // Extrahera YYMMDD
-            const birthStr = scannedData.substring(0, 6); // T.ex. "050326"
-            const year = parseInt(birthStr.substring(0, 2)); // "05"
-            const month = parseInt(birthStr.substring(2, 4)) - 1; // "03"
-            const day = parseInt(birthStr.substring(4, 6)); // "26"
+            const birthStr = scannedData.substring(0, 6);
+            const year = parseInt(birthStr.substring(0, 2));
+            const month = parseInt(birthStr.substring(2, 4)) - 1;
+            const day = parseInt(birthStr.substring(4, 6));
 
             const today = new Date();
-            const currentYear = today.getFullYear() % 100; // T.ex. 25
+            const currentYear = today.getFullYear() % 100;
 
-            // Försök med 2000-talet först
             let fullYear = 2000 + year;
             let birthDate = new Date(fullYear, month, day);
             let age = today.getFullYear() - birthDate.getFullYear();
@@ -81,7 +139,6 @@
                 age--;
             }
 
-            // Om över 50, prova 1900-talet
             if (age > 50) {
                 fullYear = 1900 + year;
                 birthDate = new Date(fullYear, month, day);
@@ -92,8 +149,6 @@
                 }
             }
 
-            // Kontrollera åldersgräns
-            const resultDiv = document.getElementById("result");
             if (age > 50 || age < 0 || isNaN(age)) {
                 resultDiv.innerHTML = `<span class="error">Ogiltigt födelsedatum (ålder över 50 eller felaktigt datum)</span>`;
             } else {
@@ -111,9 +166,17 @@
                 resultDiv.innerHTML = resultHTML;
             }
 
-            // Stoppa skannern
-            html5QrCode.stop().then(() => console.log("Skannern stoppad"));
+            html5QrCode.stop().then(() => {
+                console.log("Skannern stoppad");
+                restartButton.style.display = "block";
+            });
         }
+
+        restartButton.addEventListener("click", () => {
+            resultDiv.innerHTML = "";
+            restartButton.style.display = "none";
+            startScanner();
+        });
     </script>
 </body>
 </html>
